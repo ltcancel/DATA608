@@ -11,7 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r warning=FALSE, error=FALSE}
 #libraries
-
+library(dplyr)
+library(ggplot2)
 ```
 
 
@@ -28,17 +29,32 @@ inc <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/
 And lets preview this data:
 
 ```{r}
-head(inc)
+
+tail(inc)
+
 ```
 
+
 ```{r}
+
 summary(inc)
+
 ```
 
 Think a bit on what these summaries mean. Use the space below to add some more relevant non-visual exploratory information you think helps you understand this data:
 
 ```{r}
-# Insert your code here, create more chunks as necessary
+#After looking over the summary data, I now want to dig into some max values and other data around max values. The easiest to explore is max number of Employees by Industry and the company within that industry. The top 3 industries based on the number of employees within 1 company is Human Resources, Business Products & Services, and Security. The top companies within these industries are Integrity Staffing Solutions, Sutherland Global Services, and Universal Services of America, respectively. 
+
+inc %>%
+  select(Name, Industry, Employees) %>%
+  filter(!is.na(Employees)) %>%
+  group_by(Industry) %>%
+  arrange(desc(Employees)) %>%
+  top_n(1)
+```
+
+```{r}
 
 ```
 
@@ -47,9 +63,20 @@ Think a bit on what these summaries mean. Use the space below to add some more r
 Create a graph that shows the distribution of companies in the dataset by State (ie how many are in each state). There are a lot of States, so consider which axis you should use. This visualization is ultimately going to be consumed on a 'portrait' oriented screen (ie taller than wide), which should further guide your layout choices.
 
 ```{r}
+state_count <- inc %>%
+  count(State) %>%
+  arrange(desc(n))
 
-# Answer Question 1 here
+plot(state_count)
+```
 
+```{r}
+barplot(table(inc$State))
+```
+
+```{r}
+ggplot(inc, aes(x = State)) +
+  geom_bar()
 ```
 
 ## Quesiton 2
