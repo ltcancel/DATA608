@@ -79,6 +79,34 @@ ggplot(inc, aes(x = State)) +
   geom_bar()
 ```
 
+```{r}
+#get top 20 states
+state_count_top <- inc %>%
+  count(State) %>%
+  arrange(desc(n)) %>%
+  slice(1:20)
+
+state_count_top
+
+ggplot(state_count_top, aes(x = reorder(State, n), y = n)) +
+  geom_col() +
+  labs(x = "State", y = "Company Count", title = "Top 20 States with Most Companies") +
+  theme_bw()
+
+#get bottom 20 states
+state_count_low <- inc %>%
+  count(State) %>%
+  arrange(n) %>%
+  slice(1:20)
+
+state_count_low
+
+ggplot(state_count_low, aes(x = reorder(State, n), y = n)) +
+  geom_col() +
+  labs(x = "State", y = "Company Count", title = "20 States with Least Companies") +
+  theme_bw()
+```
+
 ## Quesiton 2
 
 Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
