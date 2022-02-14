@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r warning=FALSE, error=FALSE}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 #libraries
 library(dplyr)
 library(ggplot2)
@@ -42,10 +42,9 @@ summary(inc)
 ```
 
 Think a bit on what these summaries mean. Use the space below to add some more relevant non-visual exploratory information you think helps you understand this data:
-
+-------------------------------
+After looking over the summary data, I now want to dig into some max values and other data around max values. The easiest to explore is max number of Employees by Industry and the company within that industry. The top 3 industries based on the number of employees within 1 company is Human Resources, Business Products & Services, and Security. The top companies within these industries are Integrity Staffing Solutions, Sutherland Global Services, and Universal Services of America, respectively. 
 ```{r}
-#After looking over the summary data, I now want to dig into some max values and other data around max values. The easiest to explore is max number of Employees by Industry and the company within that industry. The top 3 industries based on the number of employees within 1 company is Human Resources, Business Products & Services, and Security. The top companies within these industries are Integrity Staffing Solutions, Sutherland Global Services, and Universal Services of America, respectively. 
-
 inc %>%
   select(Name, Industry, Employees) %>%
   filter(!is.na(Employees)) %>%
@@ -54,26 +53,11 @@ inc %>%
   top_n(1)
 ```
 
-```{r}
-inc %>%
-  select(Name, Employees) %>%
-  filter(!is.na(Employees)) %>%
-  arrange(desc(Employees))
-```
-
 ## Question 1
 
 Create a graph that shows the distribution of companies in the dataset by State (ie how many are in each state). There are a lot of States, so consider which axis you should use. This visualization is ultimately going to be consumed on a 'portrait' oriented screen (ie taller than wide), which should further guide your layout choices.
 
-```{r}
-barplot(table(inc$State))
-```
-
-```{r}
-ggplot(inc, aes(x = State)) +
-  geom_bar()
-```
-
+Since there are so many states to view, my approach to viewing this data was to split it by states with the highest number of companies and states with the least companies. I also 
 ```{r}
 #get top 20 states
 state_count_top <- inc %>%
@@ -87,7 +71,10 @@ ggplot(state_count_top, aes(x = reorder(State, n), y = n)) +
   geom_col() +
   labs(x = "State", y = "Company Count", title = "Top 20 States with Most Companies") +
   theme_bw()
+```
 
+20 states with the least number of companies:
+```{r}
 #get bottom 20 states
 state_count_low <- inc %>%
   count(State) %>%
@@ -102,15 +89,12 @@ ggplot(state_count_low, aes(x = reorder(State, n), y = n)) +
   theme_bw()
 ```
 
+
 ## Quesiton 2
 
 Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
 
 ```{r}
-?complete.cases
-complete.cases(inc)
-
-
 inc %>%  
   count(State) %>%
   arrange(desc(n)) %>%
@@ -119,6 +103,10 @@ inc %>%
 ny_inc <- inc %>%
   filter(State == 'NY')
 
+head(ny_inc)
+```
+
+```{r}
 ny_avg <- ny_inc %>%
   group_by(Industry) %>%
   summarise_at(vars(Employees), list(Avg = mean))
@@ -151,30 +139,7 @@ rev_per_emp <- inc %>%
   group_by(Industry) %>%
   summarise(Emp = sum(Employees), Rev = sum(Revenue))
 
-
-
-inc %>%
-  select(Industry, Employees, Revenue) %>%
-  arrange(desc(Revenue))
-
-inc %>%
-  select(Industry, Employees, Revenue) %>%
-  arrange(desc(Employees))
-
-inc %>%
-  count(State) %>%
-  arrange(desc(n))
-
 ggplot(rev_per_emp, aes(x = Emp, y = Rev, colour = Industry)) +
   geom_point() + 
   labs(y = "Revenue", x = "Employee", title = "Revenue per Employee by Industry")
-  
-  
-  facet_wrap(. ~ Industry) +
-  #xlim(20000, 80000) +
-  ylim(2.5e+09, 1.0e+10) 
-
-?facet_grid
 ```
-
-
