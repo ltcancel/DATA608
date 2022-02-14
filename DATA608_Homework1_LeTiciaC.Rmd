@@ -55,7 +55,10 @@ inc %>%
 ```
 
 ```{r}
-
+inc %>%
+  select(Name, Employees) %>%
+  filter(!is.na(Employees)) %>%
+  arrange(desc(Employees))
 ```
 
 ## Question 1
@@ -112,9 +115,17 @@ ggplot(state_count_low, aes(x = reorder(State, n), y = n)) +
 Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
 
 ```{r}
+complete.cases(inc)
 
-# Answer Question 2 here
 
+  count(State) %>%
+  arrange(desc(n)) %>%
+  slice(1:3)
+
+ny_inc <- inc %>%
+  filter(State == 'NY')
+
+ny_inc
 ```
 
 ## Question 3
