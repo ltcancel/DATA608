@@ -1,0 +1,405 @@
+---
+title: "DATA_621_HW3"
+author: "Chi Pong, Euclid Zhang, Jie Zou, Joseph Connolly, LeTicia Cancel"
+date: "3/8/2022"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library("corrplot")
+library("MASS")
+library("ggplot2")
+library("patchwork")
+library("faraway")
+library("car")
+library("pROC")
+library("caret")
+library("dplyr")
+
+```
+
+
+```{r}
+train_df <- read.csv("https://raw.githubusercontent.com/ezaccountz/DATA_621/main/HW3/crime-training-data_modified.csv")
+test_df <- read.csv("https://raw.githubusercontent.com/ezaccountz/DATA_621/main/HW3/crime-evaluation-data_modified.csv")
+```
+
+
+
+
+# DATA EXPLORATION
+
+```{r}
+summary(train_df)
+```
+
+```{r fig.height=6, fig.width=10}
+par(mfrow=c(3,4))
+predictors <- colnames(train_df)
+predictors <- predictors[!predictors %in% c("target")]
+
+for(preditor in predictors) {
+  boxplot(train_df[,preditor],main=preditor)
+}
+```
+
+
+```{r fig.height=10, fig.width=10}
+par(mfrow=c(4,3))
+predictors <- colnames(train_df)
+predictors <- predictors[!predictors %in% c("target")]
+
+for(preditor in predictors) {
+  boxplot(train_df[,preditor]~train_df$target,main=preditor, 
+          xlab = "target", ylab = preditor)
+}
+```
+
+
+
+```{r fig.height=6, fig.width=10}
+par(mfrow=c(3,4))
+
+predictors <- colnames(train_df)
+#predictors <- predictors[!predictors %in% c("target")]
+
+for(preditor in predictors) {
+  plot(density(train_df[,preditor],na.rm=TRUE),main=preditor)
+}
+```
+
+
+## * **Correlations**
+
+Now let's look at the correlations between the variables  
+```{r fig.height=10, fig.width=10}
+corrplot(cor(train_df, use = "na.or.complete"), method = 'number', type = 'lower', diag = FALSE, tl.srt = 0.1)
+```
+
+
+
+
+# DATA PREPARATION
+
+From the density plot of **zn**, we know that the variable is zero-inflated. The percentage of 0 values is
+
+```{r}
+nrow(train_df[train_df$zn==0,])/nrow(train_df)
+```
+Let's check the distribution of the **zn** without the 0 values
+
+```{r}
+plot(density(train_df[train_df$zn>0,]$zn,na.rm=TRUE), main = "zn > 0")
+```
+The distribution looks a lot better.  
+We will add a new dummy variable zn_y indicating if **zn** is >0. The interaction **zn x zn_y = zn** so we don't need to do anything to it. If **zn_y** is deemed to be insignificant by our models, then we can simply drop it.
+
+
+```{r}
+train_df$zn_y <- 0
+train_df$zn_y[train_df$zn>0] <- 1
+```
+
+
+
+
+
+
+
+
+According to the text book *A Modern Approach To Regression With R*, "when the predictor variable X has a Poisson distribution, the log odds are a linear function of x". Let's check if any of the predictors follows a Poisson distribution
+
+```{r}
+#Method of possion distribution test is from https://stackoverflow.com/questions/59809960/how-do-i-know-if-my-data-fit-a-poisson-distribution-using-r
+
+#two tail test
+p_poisson <- function(x) {
+  return (1-2 * abs((1 - pchisq((sum((x - mean(x))^2)/mean(x)), length(x) - 1))-0.5))
+}
+
+predictors <- colnames(train_df)
+predictors <- predictors[!predictors %in% c("target","chas","zn_y")]
+
+data.frame(mean = round(apply(train_df[,predictors],2,mean),2), 
+           variance = round(apply(train_df[,predictors],2,var),2),
+           probability_of_poisson = round(apply(train_df[,predictors],2,p_poisson),2))
+```
+None of the predictors follows a poisson distribution
+
+
+
+```{r fig.height=6, fig.width=10}
+target_factored <- as.factor(train_df$target)
+
+plot_zn <- ggplot(train_df, aes(x=zn, color=target_factored)) + geom_density()
+plot_indus <- ggplot(train_df, aes(x=indus, color=target_factored)) + geom_density()
+plot_nox <- ggplot(train_df, aes(x=nox, color=target_factored)) + geom_density()
+plot_rm <- ggplot(train_df, aes(x=rm, color=target_factored)) + geom_density()
+plot_age <- ggplot(train_df, aes(x=age, color=target_factored)) + geom_density()
+plot_dis <- ggplot(train_df, aes(x=dis, color=target_factored)) + geom_density()
+plot_rad <- ggplot(train_df, aes(x=rad, color=target_factored)) + geom_density()
+plot_tax <- ggplot(train_df, aes(x=tax, color=target_factored)) + geom_density()
+plot_prtatio <- ggplot(train_df, aes(x=ptratio, color=target_factored)) + geom_density()
+plot_lstat <- ggplot(train_df, aes(x=lstat, color=target_factored)) + geom_density()
+plots_medv <- ggplot(train_df, aes(x=medv, color=target_factored)) + geom_density()
+
+plot_zn+plot_indus+plot_nox+plot_rm+plot_age+plot_dis+plot_rad+plot_tax+
+  plot_prtatio+plot_lstat+plots_medv+plot_layout(ncol = 4, guides = "collect")
+```
+
+The distributions for rm with target = 0 and target = 1 are approximately normal with the same variance. Hence we don't need to transform the variable
+The distributions for lstat and medv are skewed for both target = 0 and target = 1, we will add a log-transformed variable for each of them
+
+The distributions for indus, nox, age, dis, tax, ptratio look significantly different for the target values. Let perform a anova tests on the single preditor models to see if adding a log transformed or a quadratic transformed variable will improve the performance.
+
+
+```{r message=FALSE, warning=FALSE}
+predictors <- c("indus", "nox", "age", "dis", "tax", "ptratio")
+
+n <- length(predictors)
+
+model_compare <- data.frame(
+    model_1 = paste0("target~",predictors),
+    model_2 = paste0("target~",predictors,"+I(",predictors,"^2)"),
+    Diff_DF = rep(0,n),
+    Diff_Deviance = rep(0.0000,n),
+    Pr_Gt_Chi = rep(0.0000,n)
+)
+
+for (i in (1:n)) {
+    test_model_1 <- glm(target~train_df[,predictors[i]],family = binomial, train_df)
+    test_model_2 <- glm(target~train_df[,predictors[i]]+I(train_df[,predictors[i]]^2),family = binomial, train_df)
+    anova_test <- anova(test_model_1,test_model_2,test="Chi")
+    model_compare[i,3] <- anova_test$Df[2]
+    model_compare[i,4] <- round(anova_test$Deviance[2],2)
+    model_compare[i,5] <- round(anova_test$`Pr(>Chi)`[2],6)
+}
+
+model_compare
+```
+```{r message=FALSE, warning=FALSE}
+predictors <- c("indus", "nox", "age", "dis", "tax", "ptratio")
+
+n <- length(predictors)
+
+model_compare <- data.frame(
+    model_1 = paste0("target~",predictors),
+    model_2 = paste0("target~",predictors,"+I(log(",predictors,"))"),
+    Diff_DF = rep(0,n),
+    Diff_Deviance = rep(0.0000,n),
+    Pr_Gt_Chi = rep(0.0000,n)
+)
+
+for (i in (1:n)) {
+    test_model_1 <- glm(target~train_df[,predictors[i]],family = binomial, train_df)
+    test_model_2 <- glm(target~train_df[,predictors[i]]+I(log(train_df[,predictors[i]])),family = binomial, train_df)
+    anova_test <- anova(test_model_1,test_model_2,test="Chi")
+    model_compare[i,3] <- anova_test$Df[2]
+    model_compare[i,4] <- round(anova_test$Deviance[2],2)
+    model_compare[i,5] <- round(anova_test$`Pr(>Chi)`[2],6)
+}
+
+model_compare
+```
+
+For indus, the improvement is bigger by adding the squared term. For ptratio, since the distribution is left-skewed, it may be better to add the squared term. For other variables, no transformation is needed.
+
+
+
+
+```{r}
+train_df$log_lstat <- log(train_df$lstat)
+train_df$log_medv <- log(train_df$medv)
+train_df$indus_squared <- train_df$indus^2
+train_df$ptratio_squared <- train_df$ptratio^2
+```
+
+
+```{r warning=FALSE}
+predictors <- colnames(train_df)
+predictors <- predictors[!predictors %in% c("target","chas","zn_y","log_lstat","log_medv","indus_squared","ptratio_squared")]
+
+interaction_test <- data.frame(matrix(ncol = 3, nrow = 0))
+colnames(interaction_test) <- c("Preditor","Interaction","Pr_Gt_Chi")
+class(interaction_test$Pr_Gt_Chi) = "Numeric"
+
+for (predictor in predictors) {
+  interaction_test[nrow(interaction_test) + 1,] <- 
+    c(predictor, paste0(predictor, ":chas"), 
+      round(anova(glm(target ~ train_df[,predictor]*chas,data = train_df, family = "binomial"),test="Chi")[4,5],4))
+}
+```
+```{r}
+interaction_test
+```
+We will add an interaction between **tax** and **chas** and an interaction between **rad** and **chas** to our preditor candidates.
+```{r}
+train_df$tax_chas <- train_df$tax * train_df$chas
+train_df$rad_chas <- train_df$rad * train_df$chas 
+```
+
+
+
+
+```{r warning=FALSE}
+full_model <- glm(target~.,family = binomial, train_df)
+```
+
+```{r}
+summary(full_model)
+```
+```{r warning=FALSE}
+model_AIC <- step(full_model, trace=0)
+```
+
+```{r}
+summary(model_AIC)
+```
+
+
+```{r warning=FALSE}
+drop1(glm(target ~ .-rad_chas-zn-lstat-log_lstat, family=binomial, train_df), test="Chi")
+```
+```{r warning=FALSE}
+model_chi <- glm(target ~ .-rad_chas-zn-lstat-log_lstat, family=binomial, train_df)
+```
+
+```{r}
+summary(model_chi)
+```
+
+
+```{r warning=FALSE}
+model_p <- glm(target~.-rad_chas-tax_chas-chas-zn-log_medv-rm,family = binomial, train_df)
+summary(model_p)
+```
+
+
+```{r}
+model_compare <- data.frame(
+    model = c("full_model","model_AIC","model_chi","model_p"),
+    Deviance = rep(0.0000,4),
+    AIC = rep(0.0000,4),
+    Accurarcy = rep(0.0000,4),
+    Sensitivity = rep(0.0000,4),
+    Specificity = rep(0.0000,4),
+    Precision = rep(0.0000,4),
+    F1 = rep(0.0000,4),
+    AUC = rep(0.0000,4),
+    Nagelkerke_R_squared = rep(0.0000,4)
+)
+```
+```{r message=FALSE, warning=FALSE}
+models <- list(full_model, model_AIC, model_chi, model_p)
+
+for (i in c(1:4)) {
+  predicted_class <- ifelse(models[[i]]$fitted.values>0.5,1,0)
+  confusion_matrix <- confusionMatrix(as.factor(predicted_class),
+                                      as.factor(train_df$target),positive = "1")
+  
+  model_compare[i,] <- c(model_compare[i,1],round(models[[i]]$deviance,4), models[[i]]$aic, 
+                            confusion_matrix$overall[1],
+                            confusion_matrix$byClass[1],
+                            confusion_matrix$byClass[2],
+                            confusion_matrix$byClass[3],
+                            2*confusion_matrix$byClass[1]*confusion_matrix$byClass[3]/
+                              (confusion_matrix$byClass[1]+confusion_matrix$byClass[3]),
+                            auc(roc(train_df$target, models[[i]]$fitted.values)),
+                            (1-exp((models[[i]]$dev-models[[i]]$null)/
+                                     length(models[[i]]$residuals)))/
+                              (1-exp(-models[[i]]$null/length(models[[i]]$residuals)))
+                            )
+}
+
+```
+
+```{r}
+model_compare[,c(2:10)] <- sapply(model_compare[,c(2:10)],as.numeric)
+model_compare
+```
+
+
+
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+marginalModelPlots(model_chi,~nox+age+dis+rad+tax+ptratio+medv,layout =c(3,3))
+```
+
+
+```{r}
+
+residual_df <- mutate(train_df, residuals=residuals(model_AIC,type="deviance"), linpred=predict(model_chi,type = "link"))
+
+gdf <- group_by(residual_df, cut(linpred, breaks=unique(quantile(linpred,(1:100)/101))))
+
+diagdf <- summarise(gdf, residuals=mean(residuals), linpred=mean(linpred))
+
+plot(residuals ~ linpred, diagdf, xlab="linear predictor",xlim=c(-20,20))
+```
+
+
+
+```{r fig.height=3, fig.width=3}
+
+predictors <- c("nox","age","dis","rad","tax","ptratio","medv")
+
+residual_df <- mutate(train_df, residuals=residuals(model_chi,type="deviance"))
+gg_plots <- list()
+
+for (i in c(1:length(predictors))) {
+    gdf <- group_by(residual_df, .dots = predictors[i])
+    diagdf <- summarise(gdf, residuals=mean(residuals))
+    print(ggplot(diagdf, aes_string(x=predictors[i],y="residuals")) + geom_point())
+}
+```
+
+```{r}
+qqnorm(residuals(model_chi))
+```
+
+
+```{r}
+halfnorm(hatvalues(model_chi))
+```
+```{r}
+train_df[c(14,37),]
+```
+
+```{r}
+predict(model_chi,train_df[c(14,37),], type="link")
+```
+
+
+
+
+```{r}
+test_df$zn_y <- 0
+test_df$zn_y[test_df$zn>0] <- 1
+
+test_df$indus_squared <- test_df$indus^2
+test_df$ptratio_squared <- test_df$ptratio^2
+
+test_df$log_lstat <- log(test_df$lstat)
+test_df$log_medv <- log(test_df$medv)
+
+test_df$tax_chas <- test_df$tax * test_df$chas
+test_df$rad_chas <- test_df$rad * test_df$chas 
+```
+
+
+```{r}
+test_df$predicted_class <- ifelse(predict(model_chi,test_df, type = "response") >0.5,1,0)
+```
+
+
+
+```{r}
+hist(test_df$predicted_class, main = "model_AIC prediction", xlab="predicted value")
+```
