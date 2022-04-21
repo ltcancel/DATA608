@@ -18,7 +18,6 @@ library(dplyr)
 library(ggplot2)
 ```
 
-
 ```{r}
 data <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv")
 ```
@@ -28,12 +27,13 @@ Question 1
 head(data)
 ```
 
-```{r fig.height=10, fig.width=10}
+```{r fig.height=20, fig.width=20}
 filter_data <- data %>%
   filter(Year == 2010)
 
 ggplot(filter_data, aes(fill = ICD.Chapter, x = State, y = Crude.Rate)) +
-  geom_bar(position='dodge', stat='identity')
+  geom_bar(position='dodge', stat='identity') + 
+  facet_wrap(~ ICD.Chapter, nrow = 9)
 ```
 
 
