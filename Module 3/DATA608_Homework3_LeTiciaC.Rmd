@@ -1,0 +1,89 @@
+---
+title: "DATA608_HW3"
+author: "LeTicia Cancel"
+date: "5/13/2022"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+
+```{r}
+data <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv")
+```
+
+Question 1
+```{r}
+head(data)
+```
+
+```{r fig.height=30, fig.width=20}
+filter_data <- data %>%
+  filter(Year == 2010)
+
+ggplot(filter_data, aes(fill = ICD.Chapter, x = State, y = Crude.Rate)) +
+  geom_bar(position='dodge', stat='identity') + 
+  facet_wrap(~ ICD.Chapter, nrow = 20)
+```
+
+There is so much information in the bar charts above that it is difficult to clearly see the mortality rates by state. However, it is clear to see which Cause of Death (column ICD.Chapter) has a higher overall rate. If we take a sum of all deaths grouped by type then take a subset of that data with the top 5 causes. 
+```{r fig.height=15, fig.width=20}
+filter_data %>%
+  group_by(ICD.Chapter) %>%
+  summarise(sum = sum(Deaths)) %>%
+  arrange(desc(sum))
+
+top_deaths <- filter_data%>%
+  filter(ICD.Chapter %in% c("Diseases of the circulatory system","Neoplasms","Diseases of the respiratory system","External causes of morbidity and mortality","Diseases of the nervous system","Mental and behavioural disorders"))
+
+head(top_deaths)
+
+ggplot(top_deaths, aes(fill = ICD.Chapter, x = State, y = Crude.Rate)) +
+  geom_bar(position='dodge', stat='identity') + 
+  facet_wrap(~ ICD.Chapter, nrow = 10)
+```
+
+
+
+Question 2
+
+Shiny app
+```{r}
+ui <- fluidPage(
+  
+  headerPanel("2010 Cause of Death by State"),
+  
+  sidebarPanel(
+   selectInput('cause','Cause of Death', unique(filter_data$ICD.Chapter)) 
+  ),
+  
+  mainPanel(plotlyOutput("plot1"))
+)
+server <- function(input,output){
+  
+  output$plot1 <- renderPlotly({
+      
+  filterdf <- filter_data %>% 
+    filter(ICD.Chapter == input$cause)
+  
+  plot_ly(filterdf, x = ~State, y = ~Crude.Rate, type = 'bar') %>%
+  layout(xaxis = list(title="State", tickangle = -45),
+         yaxis = list(title = "Death Rate"))
+  })
+  
+}
+
+shinyApp(ui, server)
+
+```
