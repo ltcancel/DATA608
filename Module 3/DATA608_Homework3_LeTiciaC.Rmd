@@ -2,10 +2,8 @@
 title: "DATA608_HW3"
 author: "LeTicia Cancel"
 date: "5/13/2022"
-output:
-  pdf_document: default
-  html_document:
-    df_print: paged
+output: html_document
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
@@ -23,11 +21,12 @@ library(plotly)
 data <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv")
 ```
 
-Question 1
+# Question 1
 ```{r}
 head(data)
 ```
 
+After loading the data I filtered the data for the year 2010 only and plotted the death rate by state and split it by mortality type. 
 ```{r fig.height=30, fig.width=20}
 filter_data <- data %>%
   filter(Year == 2010)
@@ -37,7 +36,8 @@ ggplot(filter_data, aes(fill = ICD.Chapter, x = State, y = Crude.Rate)) +
   facet_wrap(~ ICD.Chapter, nrow = 20)
 ```
 
-There is so much information in the bar charts above that it is difficult to clearly see the mortality rates by state. However, it is clear to see which Cause of Death (column ICD.Chapter) has a higher overall rate. If we take a sum of all deaths grouped by type then take a subset of that data with the top 5 causes. 
+There is so much information in the bar charts above that it is difficult to clearly see the mortality rates by state. However, it is clear to see which Cause of Death (column ICD.Chapter) has a higher overall rate. If we take a sum of all deaths grouped by type then take a subset of that data with the top 5 causes it is a little clearer to view the rate by state. 
+
 ```{r fig.height=15, fig.width=20}
 filter_data %>%
   group_by(ICD.Chapter) %>%
@@ -56,9 +56,10 @@ ggplot(top_deaths, aes(fill = ICD.Chapter, x = State, y = Crude.Rate)) +
 
 
 
-Question 2
+# Question 2
 
-Shiny app
+Here is a responsive Shiny app for 2010 mortality rates that can be filtered by cause of death. 
+
 ```{r}
 ui <- fluidPage(
   

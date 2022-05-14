@@ -3,6 +3,9 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
+data <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv")
+filter_data <- data %>%
+  filter(Year == 2010)
 
 ui <- fluidPage(
   
