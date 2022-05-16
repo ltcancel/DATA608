@@ -1,0 +1,25 @@
+---
+title: "DATA608_Final Project"
+author: "LeTicia Cancel"
+date: "5/16/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Questions
+1) Enough of the kinds of food wanted
+2) Enough food, but not always the kinds wanted
+3) Sometimes not enough to eat
+4) Often not enough to eat
+5) Did not report
+
+
+
+
+
+
+
