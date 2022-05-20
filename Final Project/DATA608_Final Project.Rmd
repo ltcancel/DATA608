@@ -89,9 +89,19 @@ Questions
 5) Did not report
 
 ```{r}
-
+ggplot(survey_df, aes(fill = Question, x = Characteristics, y = US1)) +
+  geom_bar(position='dodge', stat='identity') + 
+  facet_wrap(~ Question)
 ```
 
+```{r}
+ny_df <- survey_df %>%
+  select(Question, Characteristics, contains("NY")) %>%
+  filter(Question == "Age")
+
+ggplot(ny_df, aes(fill = Characteristics, x = Characteristics, y = NY1)) +
+  geom_bar(position='dodge', stat='identity') 
+```
 
 Resources:
 Number of persons participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022
