@@ -9,6 +9,74 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(dplyr)
+library(ggplot2)
+library(shiny)
+library(plotly)
+library(stringr)
+library(convert)
+require(maps)
+require(gridExtra)
+```
+
+```{r}
+snap_person <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Person%20Count%2005032022_cleaned.csv")
+snap_hh <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Household%20Count%2005032022_cleaned.csv")
+head(snap_person)
+head(snap_hh)
+```
+
+```{r fig.height=30, fig.width=30}
+# clean the February column of both dataframes toreplace '--' with NA and convert to an integer
+snap_hh$February <- as.integer(gsub(",","",snap_hh$February))
+snap_person$February <- as.integer(gsub(",","",snap_person$February))
+snap_hh$State <- tolower(snap_hh$State)
+snap_person$State <- tolower(snap_person$State)
+head(snap_person)
+head(snap_hh)
+```
+
+```{r}
+#combine map data from the Maps library which includes longitude and latitude data
+states_map <- map_data("state")
+snap_hh_map <- merge(snap_hh, states_map, by.x = c("State"), by.y = c("region"))
+snap_person_map <- merge(snap_person, states_map, by.x = c("State"), by.y = c("region"))
+head(snap_hh_map)
+head(snap_person_map)
+```
+
+```{r}
+plot_hh1 <- ggplot(snap_hh_map, aes(long, lat, group = group)) +
+  geom_polygon(aes(fill = February), color = "white") +
+  scale_fill_viridis_c(option = "C")
+
+plot_hh2 <- ggplot(snap_hh, aes(x = reorder(State, February), y = February, fill = State)) +
+  geom_bar(stat = "identity") +
+  labs(x = "State", y = "Household Count", title = "Supplemental Nutrition Assistance Program: Number of Households Participating") +
+  coord_flip() +
+  theme(legend.position = "none")
+```
+
+
+```{r fig.height=7, fig.width=20}
+grid.arrange(plot_hh1, plot_hh2, ncol=2)
+```
+
+
+```{r fig.height=7, fig.width=20}
+plot_person1 <- ggplot(snap_person_map, aes(long, lat, group = group)) +
+  geom_polygon(aes(fill = February), color = "white") +
+  scale_fill_viridis_c(option = "C")
+
+plot_person2 <- ggplot(snap_person, aes(x = reorder(State, February), y = February, fill = State)) +
+  geom_bar(stat = "identity") +
+  labs(x = "State", y = "Person Count", title = "Supplemental Nutrition Assistance Program: Number of Persons Participating") +
+  coord_flip() +
+  theme(legend.position = "none")
+
+grid.arrange(plot_person1, plot_person2, ncol=2)
+```
 
 Questions
 1) Enough of the kinds of food wanted
@@ -19,7 +87,9 @@ Questions
 
 
 
-
+Resources:
+Number of persons participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022
+Number of households participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022
 
 
 
