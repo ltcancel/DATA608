@@ -1,7 +1,7 @@
 ---
 title: "DATA608_Final Project"
 author: "LeTicia Cancel"
-date: "5/16/2022"
+date: "5/20/2022"
 output: html_document
 ---
 
@@ -9,13 +9,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(shiny)
 library(plotly)
 library(stringr)
-library(convert)
 require(maps)
 require(gridExtra)
 ```
@@ -23,18 +22,22 @@ require(gridExtra)
 ```{r}
 snap_person <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Person%20Count%2005032022_cleaned.csv")
 snap_hh <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Household%20Count%2005032022_cleaned.csv")
+survey_df <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/Food%20Security%20Survey.csv")
 head(snap_person)
 head(snap_hh)
+head(survey_df)
 ```
 
-```{r fig.height=30, fig.width=30}
+```{r fig.height=30, fig.width=30, warning=FALSE}
 # clean the February column of both dataframes toreplace '--' with NA and convert to an integer
 snap_hh$February <- as.integer(gsub(",","",snap_hh$February))
 snap_person$February <- as.integer(gsub(",","",snap_person$February))
 snap_hh$State <- tolower(snap_hh$State)
 snap_person$State <- tolower(snap_person$State)
+survey_df[3:267] <- sapply(df, as.numeric)
 head(snap_person)
 head(snap_hh)
+head(survey_df)
 ```
 
 ```{r}
@@ -59,12 +62,12 @@ plot_hh2 <- ggplot(snap_hh, aes(x = reorder(State, February), y = February, fill
 ```
 
 
-```{r fig.height=7, fig.width=20}
+```{r fig.height=7, fig.width=20, warning=FALSE}
 grid.arrange(plot_hh1, plot_hh2, ncol=2)
 ```
 
 
-```{r fig.height=7, fig.width=20}
+```{r fig.height=7, fig.width=20, warning=FALSE}
 plot_person1 <- ggplot(snap_person_map, aes(long, lat, group = group)) +
   geom_polygon(aes(fill = February), color = "white") +
   scale_fill_viridis_c(option = "C")
@@ -85,6 +88,9 @@ Questions
 4) Often not enough to eat
 5) Did not report
 
+```{r}
+
+```
 
 
 Resources:
