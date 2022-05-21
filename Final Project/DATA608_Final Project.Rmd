@@ -17,6 +17,7 @@ library(plotly)
 library(stringr)
 require(maps)
 require(gridExtra)
+library(tidyr)
 ```
 
 ```{r}
@@ -34,7 +35,7 @@ snap_hh$February <- as.integer(gsub(",","",snap_hh$February))
 snap_person$February <- as.integer(gsub(",","",snap_person$February))
 snap_hh$State <- tolower(snap_hh$State)
 snap_person$State <- tolower(snap_person$State)
-survey_df[3:267] <- sapply(df, as.numeric)
+survey_df <- select(survey_df, -c(US1, US2, US3, US4, US5))
 head(snap_person)
 head(snap_hh)
 head(survey_df)
@@ -88,19 +89,61 @@ Questions
 4) Often not enough to eat
 5) Did not report
 
+
 ```{r}
-ggplot(survey_df, aes(fill = Question, x = Characteristics, y = US1)) +
-  geom_bar(position='dodge', stat='identity') + 
-  facet_wrap(~ Question)
+transformed_df <- survey_df %>%
+  gather(key = "response", value = "count", AL1:METRO5)
+
+transformed_df$State <- substr(transformed_df$response, 1,2)
+transformed_df$response <- substr(transformed_df$response, 3, 3)
+
+transformed_df <- transformed_df %>%
+  mutate(response = ifelse(response =="1", "Enough of the kinds of food wanted", ifelse(response=="2", "Enough food, but not always the kinds wanted", ifelse(response=="3", "Sometimes not enough to eat", ifelse(response=="4", "Often not enough to eat", ifelse(response=="5","Did not report",NA))))))
+
+head(transformed_df)
+```
+
+
+
+```{r}
+ggplot(transformed_df, aes(fill = response, x = State, y = count)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  facet_wrap(~Characteristics)
+```
+
+```{r fig.height=20, fig.width=20}
+age_df <- transformed_df %>%
+  filter(Question == "Confidence in paying next rent or mortgage") 
+
+ggplot(age_df, aes(fill = response, x = State, y = count)) +
+  geom_bar(position = "dodge", stat = "identity")
 ```
 
 ```{r}
-ny_df <- survey_df %>%
-  select(Question, Characteristics, contains("NY")) %>%
-  filter(Question == "Age")
+ui <- fluidPage(
+  
+  headerPanel("2010 Cause of Death by State"),
+  
+  sidebarPanel(
+   selectInput('cause','Cause of Death', unique(transformed_df$Question)) 
+  ),
+  
+  mainPanel(plotlyOutput("plot1"))
+)
+server <- function(input,output){
+  
+  output$plot1 <- renderPlotly({
+      
+  filterdf <- transformed_df %>% 
+    filter(Question == input$cause)
+  
+  plot_ly(filterdf, x = ~State, y = ~count, type = "bar")
+  
+  })
+  
+}
 
-ggplot(ny_df, aes(fill = Characteristics, x = Characteristics, y = NY1)) +
-  geom_bar(position='dodge', stat='identity') 
+shinyApp(ui, server)
 ```
 
 Resources:
