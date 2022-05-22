@@ -1,8 +1,10 @@
 ---
-title: "DATA608_Final Project"
+title: "DATA608 Final Project"
 author: "LeTicia Cancel"
 date: "5/20/2022"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -20,14 +22,36 @@ require(gridExtra)
 library(tidyr)
 ```
 
+# Food Insecurity in America
+
+Food insecurity as defined by the U.S. Department of Agriculture is the "household-level economic and social condition of limited or uncertain access to adequate food". [1] We will explore the distribution of individuals and families who use programs to assist with food. We will also explore survey results to see in relative real time how families about their food situation now. 
+
+# Datasets
 ```{r}
 snap_person <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Person%20Count%2005032022_cleaned.csv")
 snap_hh <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Household%20Count%2005032022_cleaned.csv")
 survey_df <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/Food%20Security%20Survey.csv")
+```
+Three datasets were used  for this analysis. The first is a count of individuals participating in Supplemental Nutrition Assistance Program (SNAP) in February 2022. The data is as of May 3, 2022. [2]
+```{r}
 head(snap_person)
+```
+
+The second dataset is the same as the dataset above but for households. 
+```{r}
 head(snap_hh)
+```
+
+The third dataset contains Food Sufficiency survey results from March 30, 2022 - April 11, 2022 from individual over the age of 18 in each state. Possible survey responses were: [3]
+1 - Enough of the kinds of food wanted
+2 - Enough food, but not always the kinds wanted
+3 - Sometimes not enough to eat
+4 - Often not enough to eat
+5 - Did not report
+```{r}
 head(survey_df)
 ```
+
 
 ```{r fig.height=30, fig.width=30, warning=FALSE}
 # clean the February column of both dataframes toreplace '--' with NA and convert to an integer
@@ -36,9 +60,6 @@ snap_person$February <- as.integer(gsub(",","",snap_person$February))
 snap_hh$State <- tolower(snap_hh$State)
 snap_person$State <- tolower(snap_person$State)
 survey_df <- select(survey_df, -c(US1, US2, US3, US4, US5))
-head(snap_person)
-head(snap_hh)
-head(survey_df)
 ```
 
 ```{r}
@@ -46,11 +67,15 @@ head(survey_df)
 states_map <- map_data("state")
 snap_hh_map <- merge(snap_hh, states_map, by.x = c("State"), by.y = c("region"))
 snap_person_map <- merge(snap_person, states_map, by.x = c("State"), by.y = c("region"))
-head(snap_hh_map)
-head(snap_person_map)
+head(snap_hh)
 ```
 
 ```{r}
+#combine map data from the Maps library which includes longitude and latitude data
+states_map <- map_data("state")
+snap_hh_map <- merge(snap_hh, states_map, by.x = c("State"), by.y = c("region"))
+snap_person_map <- merge(snap_person, states_map, by.x = c("State"), by.y = c("region"))
+
 plot_hh1 <- ggplot(snap_hh_map, aes(long, lat, group = group)) +
   geom_polygon(aes(fill = February), color = "white") +
   scale_fill_viridis_c(option = "C")
@@ -105,40 +130,79 @@ head(transformed_df)
 
 
 
-```{r}
-ggplot(transformed_df, aes(fill = response, x = State, y = count)) +
-  geom_bar(position = "dodge", stat = "identity") +
-  facet_wrap(~Characteristics)
-```
+```{r warning=FALSE, fig.height=20, fig.width=20}
+p_age <- transformed_df %>%
+  filter(Question == "Age") %>%
+  ggplot(aes(fill = response, x = State, y = count)) +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(~Characteristics, ncol = 2) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90))
 
-```{r fig.height=20, fig.width=20}
-age_df <- transformed_df %>%
-  filter(Question == "Confidence in paying next rent or mortgage") 
+p_gender <- transformed_df %>%
+  filter(Question == "Gender") %>%
+  ggplot(aes(fill = response, x = State, y = count)) +   
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(~Characteristics, ncol = 2) +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 90))
 
-ggplot(age_df, aes(fill = response, x = State, y = count)) +
-  geom_bar(position = "dodge", stat = "identity")
+p_edu <- transformed_df %>%
+  filter(Question == "Education") %>%
+  ggplot(aes(fill = response, x = State, y = count)) +   
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(~Characteristics, ncol = 2) +
+  theme(legend.position = "bottom", axis.text.x = element_text(angle = 90))
+
+grid.arrange(p_age, p_gender, p_edu, ncol = 1)
 ```
 
 ```{r}
 ui <- fluidPage(
   
-  headerPanel("2010 Cause of Death by State"),
+  headerPanel("Food Sufficiency for Households: March 30-April 11"),
   
   sidebarPanel(
-   selectInput('cause','Cause of Death', unique(transformed_df$Question)) 
+   selectInput('cause','Survey Question', unique(transformed_df$Question)) 
   ),
   
-  mainPanel(plotlyOutput("plot1"))
+  fluidRow(
+    column(10,plotOutput("plot1"))
+    #column(6,tableOutput("table1"))    
+  )
+
+  
+  #fluidRow(
+   # mainPanel(plotOutput("plot1", width = "100%"), tableOutput("table1"))
+  #)
+  
+  
+  
+  
 )
 server <- function(input,output){
   
-  output$plot1 <- renderPlotly({
+  output$plot1 <- renderPlot({
       
   filterdf <- transformed_df %>% 
     filter(Question == input$cause)
   
-  plot_ly(filterdf, x = ~State, y = ~count, type = "bar")
+  ggplot(filterdf, aes(fill = response, x = State, y = count)) +  
+    geom_bar(position = "stack", stat = "identity") +
+    facet_wrap(~Characteristics, ncol = 1) +
+    theme(legend.position = "top", axis.text = element_text(size = 14), axis.text.x = element_text(angle = 90), axis.title = element_text(size = 14), text = element_text(size = 14)) + 
+    labs(y = "Household Count", fill = "Survey Response")
   
+  }, height = 900, width = 1200)
+
+  output$table1 <- renderTable({
+    filterdf <- transformed_df %>%
+      filter(Question == input$cause)
+    
+    filterdf %>%
+      na.omit() %>%
+      group_by(State, response) %>%
+      summarise(count = sum(count)) %>%
+      spread(State, count)
+      
   })
   
 }
@@ -146,9 +210,10 @@ server <- function(input,output){
 shinyApp(ui, server)
 ```
 
-Resources:
-Number of persons participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022
-Number of households participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022
+# Resources
+1 - https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/definitions-of-food-security/
+2 - Number of persons and households participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022 https://www.fns.usda.gov/pd/supplemental-nutrition-assistance-program-snap 
+3 - Week 44 Household Pulse Survey: March 30-April 11 https://www.census.gov/data/tables/2022/demo/hhp/hhp44.html 
 
 
 
