@@ -52,25 +52,20 @@ The third dataset contains Food Sufficiency survey results from March 30, 2022 -
 head(survey_df)
 ```
 
+The survey data was cleaned and merged with a map dataframe that contains longtitue and latitude information that will be used to map the data. 
 
-```{r fig.height=30, fig.width=30, warning=FALSE}
+Here we see a side by side of a map and barchart displaying the number of households participating in SNAP. The darker shade represents the lower end of the scale and gets lighter as the scale increments. It is very obvious to see that California has the highest number of households participating in SNAP because of the clear yellow color. New York State is the second highest based on color, followed by Texas and Florida that has what appears to be identical colors. The colors in middle America are a similar darker shade which tell us that these states have the fewest households participating in SNAP. I can think of two possible reasons for the extreme variance in colors between the states mentioned. States with large urban areas such as New York, California, Texas, and Florida have a denser population in their cities when compared to a states in the middle. It is also possible that programs like SNAP may not be available in suburban states.The barchart to the right help confirm the color difference in the map. The bar for California is more than double the length than most states other than New York, Texas, and Florida. The bars for Texas and Florida are nearly the same length but Texas is slightly ahead. 
+
+```{r fig.height=7, fig.width=20, warning=FALSE}
 # clean the February column of both dataframes toreplace '--' with NA and convert to an integer
 snap_hh$February <- as.integer(gsub(",","",snap_hh$February))
 snap_person$February <- as.integer(gsub(",","",snap_person$February))
+
+# set state field to lowercase so it can be joined with the map data
 snap_hh$State <- tolower(snap_hh$State)
 snap_person$State <- tolower(snap_person$State)
 survey_df <- select(survey_df, -c(US1, US2, US3, US4, US5))
-```
 
-```{r}
-#combine map data from the Maps library which includes longitude and latitude data
-states_map <- map_data("state")
-snap_hh_map <- merge(snap_hh, states_map, by.x = c("State"), by.y = c("region"))
-snap_person_map <- merge(snap_person, states_map, by.x = c("State"), by.y = c("region"))
-head(snap_hh)
-```
-
-```{r}
 #combine map data from the Maps library which includes longitude and latitude data
 states_map <- map_data("state")
 snap_hh_map <- merge(snap_hh, states_map, by.x = c("State"), by.y = c("region"))
@@ -78,29 +73,37 @@ snap_person_map <- merge(snap_person, states_map, by.x = c("State"), by.y = c("r
 
 plot_hh1 <- ggplot(snap_hh_map, aes(long, lat, group = group)) +
   geom_polygon(aes(fill = February), color = "white") +
-  scale_fill_viridis_c(option = "C")
+  scale_fill_viridis_c(option = "C") +
+  labs(x = "", y = "", title = "Supplemental Nutrition Assistance Program: Number of Households Participating") +
+  theme(axis.text.x=element_blank(), 
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
 
 plot_hh2 <- ggplot(snap_hh, aes(x = reorder(State, February), y = February, fill = State)) +
   geom_bar(stat = "identity") +
-  labs(x = "State", y = "Household Count", title = "Supplemental Nutrition Assistance Program: Number of Households Participating") +
+  labs(x = "State", y = "Household Count") +
   coord_flip() +
   theme(legend.position = "none")
-```
 
-
-```{r fig.height=7, fig.width=20, warning=FALSE}
 grid.arrange(plot_hh1, plot_hh2, ncol=2)
 ```
 
+The charts below display a similar dataset but of individuals instead of households. If we compare the Household map above to the Persons map below we see that the colors are very similar for most states. California is still the brightest with yellow, Florida and New York are a similar shade of orange, but Texas is a lighter shade. The barchart confirms that the number of individuals in Texas exceeds the number of individuals in New York and Florida remains the fourth highest. 
 
 ```{r fig.height=7, fig.width=20, warning=FALSE}
 plot_person1 <- ggplot(snap_person_map, aes(long, lat, group = group)) +
   geom_polygon(aes(fill = February), color = "white") +
-  scale_fill_viridis_c(option = "C")
+  scale_fill_viridis_c(option = "C") +
+  labs(x = "", y = "", title = "Supplemental Nutrition Assistance Program: Number of Persons Participating") +
+  theme(axis.text.x=element_blank(), 
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
 
 plot_person2 <- ggplot(snap_person, aes(x = reorder(State, February), y = February, fill = State)) +
   geom_bar(stat = "identity") +
-  labs(x = "State", y = "Person Count", title = "Supplemental Nutrition Assistance Program: Number of Persons Participating") +
+  labs(x = "State", y = "Person Count") +
   coord_flip() +
   theme(legend.position = "none")
 
