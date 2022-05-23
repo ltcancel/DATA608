@@ -1,30 +1,36 @@
-<!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<script type="text/javascript">
-		function reverseString(str){
-			var splitString = str.split("");
-
-			var newString = "";
-
-			for(var i = str.length - 1; i >= 0; i--){
-				newString += str[i];
-			}
-			return newString;
-		}
-		reverseString("hello");
-	</script>
-	<title></title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
 </head>
 <body>
+<script type="text/javascript">
+    function reverseString(str){
+        var newString = "";
+
+        for(var i = str.length - 1; i >= 0; i--){
+            newString += str[i];
+        }
+        return newString
+    }
+
+    function newWord(){
+        var new_word = document.getElementByID('answer');
+        new_word.innerHTML = reverseString(document.getElementByID('word').value);
+    }
+</script>
 <p>
-	Input a word: 
-	<input type="button" onclick="reverseString" value="Display">
+    Enter a word and click Submit to reverse it.
 </p>
 <p>
-	Word in Reverse: 
+    <form>
+        <input id="word" type="string">
+        <input type="button" value="Submit" onClick="newWord();">   
+    </form>
 </p>
+<p>Word reversed: </p><div id="answer"></div>
+
+
 </body>
 </html>
