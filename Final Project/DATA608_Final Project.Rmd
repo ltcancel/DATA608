@@ -5,6 +5,7 @@ date: "5/20/2022"
 output: 
   html_document:
     code_folding: hide
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -20,43 +21,65 @@ library(stringr)
 require(maps)
 require(gridExtra)
 library(tidyr)
+library(rmarkdown)
+library(knitr)
+library(kableExtra)
 ```
 
 # Food Insecurity in America
 
-Food insecurity as defined by the U.S. Department of Agriculture is the "household-level economic and social condition of limited or uncertain access to adequate food". [1] We will explore the distribution of individuals and families who use programs to assist with food. We will also explore survey results to see in relative real time how families about their food situation now. 
+Food insecurity as defined by the U.S. Department of Agriculture is the "household-level economic and social condition of limited or uncertain access to adequate food". [1](https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/definitions-of-food-security/) We will explore the distribution of individuals and families who use programs to assist with food. We will also explore responses from a survey conducted by the U.S. Census Bureau that asks participants how they viewed their current food security.
 
 # Datasets
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
+#load data from github
 snap_person <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Person%20Count%2005032022_cleaned.csv")
 snap_hh <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/SNAP%20Household%20Count%2005032022_cleaned.csv")
 survey_df <- read.csv("https://raw.githubusercontent.com/ltcancel/DATA608/main/Final%20Project/Food%20Security%20Survey.csv")
 ```
-Three datasets were used  for this analysis. The first is a count of individuals participating in Supplemental Nutrition Assistance Program (SNAP) in February 2022. The data is as of May 3, 2022. [2]
-```{r}
-head(snap_person)
+
+Three datasets were used  for this analysis. The first is a count of individuals participating in Supplemental Nutrition Assistance Program (SNAP) in February 2022. The data is as of May 3, 2022. [2](https://www.fns.usda.gov/pd/supplemental-nutrition-assistance-program-snap) The original data compares the number of individuals participating in SNAP in February 2021, January 2022, February 2022, and the percentage change from last year to this year. For the purpose of this project, we will only use the most recent count, February 2022 data for each state. 
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+#preview SNAP Persons dataframe 
+kable(head(snap_person)) %>%
+  kable_styling(position = "center")
 ```
 
-The second dataset is the same as the dataset above but for households. 
-```{r}
-head(snap_hh)
+The second dataset compares the number of households participating in SNAP and the data is also as of May 3, 2022. The structure of this dataset is exactly the same as the Persons dataset and we will also only use the most recent count, February 2022 data for each state. 
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+#preview SNAP household dataframe
+kable(head(snap_hh)) %>%
+  kable_styling(position = "center")
 ```
 
-The third dataset contains Food Sufficiency survey results from March 30, 2022 - April 11, 2022 from individual over the age of 18 in each state. Possible survey responses were: [3]
-1 - Enough of the kinds of food wanted
-2 - Enough food, but not always the kinds wanted
-3 - Sometimes not enough to eat
-4 - Often not enough to eat
-5 - Did not report
-```{r}
-head(survey_df)
+The third dataset contains Food Sufficiency survey results from March 30, 2022 - April 11, 2022 from individuals over the age of 18 in each state. [3](https://www.census.gov/data/tables/2022/demo/hhp/hhp44.html) The survey consists of 5 questions listed below and includes demographic and household information.
+
+1. Enough of the kinds of food wanted 
+2. Enough food, but not always the kinds wanted 
+3. Sometimes not enough to eat 
+4. Often not enough to eat 
+5. Did not report 
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+#preview survey dataframe
+#kable(head(survey_df)) %>%
+ # kable_styling(position = "center")
+#paged_table(survey_df)
+#head(survey_df)
 ```
 
-The survey data was cleaned and merged with a map dataframe that contains longtitue and latitude information that will be used to map the data. 
+# Data Cleaning 
 
-Here we see a side by side of a map and barchart displaying the number of households participating in SNAP. The darker shade represents the lower end of the scale and gets lighter as the scale increments. It is very obvious to see that California has the highest number of households participating in SNAP because of the clear yellow color. New York State is the second highest based on color, followed by Texas and Florida that has what appears to be identical colors. The colors in middle America are a similar darker shade which tell us that these states have the fewest households participating in SNAP. I can think of two possible reasons for the extreme variance in colors between the states mentioned. States with large urban areas such as New York, California, Texas, and Florida have a denser population in their cities when compared to a states in the middle. It is also possible that programs like SNAP may not be available in suburban states.The barchart to the right help confirm the color difference in the map. The bar for California is more than double the length than most states other than New York, Texas, and Florida. The bars for Texas and Florida are nearly the same length but Texas is slightly ahead. 
+The SNAP data was cleaned and merged with a map dataframe that contains longitude and latitude information so it can be plotted on a map. The original data in both the persons and household dataframes use "--" to represent missing data so this was replaced with "NA". The text in the State columns were changed to lowercase so it can be merged with the map data. 
 
-```{r fig.height=7, fig.width=20, warning=FALSE}
+```{r warning=FALSE, error=FALSE, message=FALSE}
+#original data before cleaning
+snap_hh_original <- snap_hh
+snap_person_original <- snap_person
+survey_df_original <- survey_df
+
 # clean the February column of both dataframes toreplace '--' with NA and convert to an integer
 snap_hh$February <- as.integer(gsub(",","",snap_hh$February))
 snap_person$February <- as.integer(gsub(",","",snap_person$February))
@@ -71,6 +94,41 @@ states_map <- map_data("state")
 snap_hh_map <- merge(snap_hh, states_map, by.x = c("State"), by.y = c("region"))
 snap_person_map <- merge(snap_person, states_map, by.x = c("State"), by.y = c("region"))
 
+kable(list(head(snap_hh_original),head(snap_hh)), caption = "SNAP Household dataframe original vs cleaned") %>%
+  kable_styling(position = "center") 
+```
+```{r warning=FALSE, error=FALSE, message=FALSE}
+kable(list(head(snap_hh_original),head(snap_hh)), caption = "SNAP Persons dataframe original vs cleaned") %>%
+  kable_styling(position = "center") 
+```
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+paged_table(survey_df_original) 
+```
+
+
+The Food Security Survey data was also cleaned by transforming a wide dataset to a long dataset. The survey responses and state were in the same column and needed to be split into their own column. The questions were also numbers and needed to be translated to text. 
+
+```{r warning=FALSE, error=FALSE, message=FALSE}
+transformed_df <- survey_df %>%
+  gather(key = "response", value = "count", AL1:METRO5)
+
+transformed_df$State <- substr(transformed_df$response, 1,2)
+transformed_df$response <- substr(transformed_df$response, 3, 3)
+
+transformed_df <- transformed_df %>%
+  mutate(response = ifelse(response =="1", "Enough of the kinds of food wanted", ifelse(response=="2", "Enough food, but not always the kinds wanted", ifelse(response=="3", "Sometimes not enough to eat", ifelse(response=="4", "Often not enough to eat", ifelse(response=="5","Did not report",NA))))))
+
+kable(head(transformed_df), caption = "Cleaned survey data") %>%
+  kable_styling(position = "center")
+```
+
+# Visualizations 
+
+Below is a side-by-side comparison of a map and barchart that displays the number of households participating in SNAP. The darker shade represents the lower end of the scale and gets lighter as the scale increments. It is very obvious to see that California has the highest number of households participating in SNAP because of the clear yellow color. New York State is the second highest based on color, followed by Texas and Florida that has what appears to be identical colors. The colors in middle America are a similar darker shade which tell us that these states have the fewest households participating in SNAP. I can think of two possible reasons for the extreme variance in colors between the states mentioned. States with large urban areas such as New York, California, Texas, and Florida have a denser population in their cities when compared to a states in the middle. It is also possible that programs like SNAP may not be available in suburban states.The barchart to the right help confirm the color difference in the map. The bar for California is more than double the length than most states other than New York, Texas, and Florida. The bars for Texas and Florida are nearly the same length but Texas is slightly ahead. 
+
+
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.height=7, fig.width=20}
 plot_hh1 <- ggplot(snap_hh_map, aes(long, lat, group = group)) +
   geom_polygon(aes(fill = February), color = "white") +
   scale_fill_viridis_c(option = "C") +
@@ -78,7 +136,8 @@ plot_hh1 <- ggplot(snap_hh_map, aes(long, lat, group = group)) +
   theme(axis.text.x=element_blank(), 
         axis.ticks.x=element_blank(),
         axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(size = 16))
 
 plot_hh2 <- ggplot(snap_hh, aes(x = reorder(State, February), y = February, fill = State)) +
   geom_bar(stat = "identity") +
@@ -91,7 +150,7 @@ grid.arrange(plot_hh1, plot_hh2, ncol=2)
 
 The charts below display a similar dataset but of individuals instead of households. If we compare the Household map above to the Persons map below we see that the colors are very similar for most states. California is still the brightest with yellow, Florida and New York are a similar shade of orange, but Texas is a lighter shade. The barchart confirms that the number of individuals in Texas exceeds the number of individuals in New York and Florida remains the fourth highest. 
 
-```{r fig.height=7, fig.width=20, warning=FALSE}
+```{r warning=FALSE, error=FALSE, message=FALSE, fig.height=7, fig.width=20}
 plot_person1 <- ggplot(snap_person_map, aes(long, lat, group = group)) +
   geom_polygon(aes(fill = February), color = "white") +
   scale_fill_viridis_c(option = "C") +
@@ -99,7 +158,8 @@ plot_person1 <- ggplot(snap_person_map, aes(long, lat, group = group)) +
   theme(axis.text.x=element_blank(), 
         axis.ticks.x=element_blank(),
         axis.text.y=element_blank(),
-        axis.ticks.y=element_blank())
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(size = 16))
 
 plot_person2 <- ggplot(snap_person, aes(x = reorder(State, February), y = February, fill = State)) +
   geom_bar(stat = "identity") +
@@ -110,55 +170,10 @@ plot_person2 <- ggplot(snap_person, aes(x = reorder(State, February), y = Februa
 grid.arrange(plot_person1, plot_person2, ncol=2)
 ```
 
-Questions
-1) Enough of the kinds of food wanted
-2) Enough food, but not always the kinds wanted
-3) Sometimes not enough to eat
-4) Often not enough to eat
-5) Did not report
+The interactive plot below allows you to view the survey responses for each state as a whole and also grouped by the characteristics of each survey respondent. If we view all responses we can see that California has the highest number of responses followed by Texas and Florida. When looking at the five possible survey responses, all three states had higher responses for having "Enough of the kinds of food wanted" followed by having "Enough food but not always the kinds wanted". If we compare the survey results to the SNAP data we see that these three states stand out in all datasets. Unfortunately we are not able to make more of a connection between the SNAP data and the survey data. If the data were available we could explore if the persons participating in SNAP were part of the survey. Are the individuals who reported having enough food have access to the food due to SNAP or are they able to access this food without assistance? 
 
 
-```{r}
-transformed_df <- survey_df %>%
-  gather(key = "response", value = "count", AL1:METRO5)
-
-transformed_df$State <- substr(transformed_df$response, 1,2)
-transformed_df$response <- substr(transformed_df$response, 3, 3)
-
-transformed_df <- transformed_df %>%
-  mutate(response = ifelse(response =="1", "Enough of the kinds of food wanted", ifelse(response=="2", "Enough food, but not always the kinds wanted", ifelse(response=="3", "Sometimes not enough to eat", ifelse(response=="4", "Often not enough to eat", ifelse(response=="5","Did not report",NA))))))
-
-head(transformed_df)
-```
-
-
-
-```{r warning=FALSE, fig.height=20, fig.width=20}
-p_age <- transformed_df %>%
-  filter(Question == "Age") %>%
-  ggplot(aes(fill = response, x = State, y = count)) +
-  geom_bar(position = "stack", stat = "identity") +
-  facet_wrap(~Characteristics, ncol = 2) +
-  theme(legend.position = "none", axis.text.x = element_text(angle = 90))
-
-p_gender <- transformed_df %>%
-  filter(Question == "Gender") %>%
-  ggplot(aes(fill = response, x = State, y = count)) +   
-  geom_bar(position = "stack", stat = "identity") +
-  facet_wrap(~Characteristics, ncol = 2) +
-  theme(legend.position = "none", axis.text.x = element_text(angle = 90))
-
-p_edu <- transformed_df %>%
-  filter(Question == "Education") %>%
-  ggplot(aes(fill = response, x = State, y = count)) +   
-  geom_bar(position = "stack", stat = "identity") +
-  facet_wrap(~Characteristics, ncol = 2) +
-  theme(legend.position = "bottom", axis.text.x = element_text(angle = 90))
-
-grid.arrange(p_age, p_gender, p_edu, ncol = 1)
-```
-
-```{r}
+```{r warning=FALSE, error=FALSE, message=FALSE}
 ui <- fluidPage(
   
   headerPanel("Food Sufficiency for Households: March 30-April 11"),
@@ -194,7 +209,7 @@ server <- function(input,output){
     theme(legend.position = "top", axis.text = element_text(size = 14), axis.text.x = element_text(angle = 90), axis.title = element_text(size = 14), text = element_text(size = 14)) + 
     labs(y = "Household Count", fill = "Survey Response")
   
-  }, height = 900, width = 1200)
+  })
 
   output$table1 <- renderTable({
     filterdf <- transformed_df %>%
@@ -214,9 +229,10 @@ shinyApp(ui, server)
 ```
 
 # Resources
-1 - https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/definitions-of-food-security/
-2 - Number of persons and households participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022 https://www.fns.usda.gov/pd/supplemental-nutrition-assistance-program-snap 
-3 - Week 44 Household Pulse Survey: March 30-April 11 https://www.census.gov/data/tables/2022/demo/hhp/hhp44.html 
+1. https://www.ers.usda.gov/topics/food-nutrition-assistance/food-security-in-the-u-s/definitions-of-food-security/ 
+2. Number of persons and households participating in Supplemental Nutrition Assistance program (SNAP) as of May 3, 2022 https://www.fns.usda.gov/pd/supplemental-nutrition-assistance-program-snap 
+3. Week 44 Household Pulse Survey: March 30-April 11 https://www.census.gov/data/tables/2022/demo/hhp/hhp44.html 
+
 
 
 
