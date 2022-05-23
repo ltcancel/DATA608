@@ -119,6 +119,8 @@ transformed_df$response <- substr(transformed_df$response, 3, 3)
 transformed_df <- transformed_df %>%
   mutate(response = ifelse(response =="1", "Enough of the kinds of food wanted", ifelse(response=="2", "Enough food, but not always the kinds wanted", ifelse(response=="3", "Sometimes not enough to eat", ifelse(response=="4", "Often not enough to eat", ifelse(response=="5","Did not report",NA))))))
 
+#write.csv(transformed_df,"final_df.csv", row.names = FALSE)
+
 kable(head(transformed_df), caption = "Cleaned survey data") %>%
   kable_styling(position = "center")
 ```
@@ -172,6 +174,7 @@ grid.arrange(plot_person1, plot_person2, ncol=2)
 
 The interactive plot below allows you to view the survey responses for each state as a whole and also grouped by the characteristics of each survey respondent. If we view all responses we can see that California has the highest number of responses followed by Texas and Florida. When looking at the five possible survey responses, all three states had higher responses for having "Enough of the kinds of food wanted" followed by having "Enough food but not always the kinds wanted". If we compare the survey results to the SNAP data we see that these three states stand out in all datasets. Unfortunately we are not able to make more of a connection between the SNAP data and the survey data. If the data were available we could explore if the persons participating in SNAP were part of the survey. Are the individuals who reported having enough food have access to the food due to SNAP or are they able to access this food without assistance? 
 
+The shinyapp can also be accessed here: https://ltcancel.shinyapps.io/Final_Project/ 
 
 ```{r warning=FALSE, error=FALSE, message=FALSE}
 ui <- fluidPage(
